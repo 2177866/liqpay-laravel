@@ -15,4 +15,3 @@ Thumbs.db
 /test-results/
 coverage/
 *.cov
-*.xml
