@@ -127,5 +127,10 @@ class LiqPayWebhookDto extends BaseDto
         public ?float $refund_amount = null,
         public ?string $refund_date_last = null,
         public ?string $verifycode = null,
+        public ?int $end_date = null,
+
+        // undocumented
+        public ?string $language = null,
+        public ?int $transaction_id = null,
     ) {}
 }

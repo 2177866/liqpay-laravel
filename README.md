@@ -36,13 +36,13 @@
 
 Добавьте пакет через Composer:
 
-```
+```shell
 composer require alyakin/liqpay-laravel
 ```
 
 Публикация конфигурации:
 
-```
+```shell
 php artisan vendor:publish --tag=liqpay-config
 ```
 
@@ -52,16 +52,14 @@ php artisan vendor:publish --tag=liqpay-config
 
 - `public_key` — публичный ключ от LiqPay
 - `private_key` — приватный ключ от LiqPay
-- `sandbox` — режим песочницы (`true`/`false`)
 - `result_url` — ссылка для перенаправления пользователя после оплаты
 - `server_url` — ссылка для программного уведомления (webhook)
 
 Все параметры можно переопределить через `.env` файл:
 
-```
+```shell
 LIQPAY_PUBLIC_KEY=your_public_key
 LIQPAY_PRIVATE_KEY=your_private_key
-LIQPAY_SANDBOX=true
 LIQPAY_RESULT_URL="${APP_URL}/billing"
 LIQPAY_SERVER_URL="/api/liqpay/webhook"
 ```
@@ -70,19 +68,24 @@ LIQPAY_SERVER_URL="/api/liqpay/webhook"
 
 ### Формирование ссылки для оплаты
 
-```
-use LiqPay\Laravel\Services\LiqPay;
+```php
+use Alyakin\LiqPayLaravel\Contracts\LiqPayServiceInterface as LiqPay;
+use Alyakin\LiqPayLaravel\DTO\LiqPayRequestDto;
 
 $liqpay = app(LiqPay::class);
 
-$url = $liqpay->paymentUrl([
+$url = $liqpay->getPaymentUrl(LiqPayRequestDto::fromArray([
+    'version' => 3,
+    'public_key' => config('liqpay.public_key'),
+    'action' => 'pay',
     'amount' => 100,
     'currency' => 'UAH',
-    'description' => 'Оплата заказа #1234',
-    'order_id' => 'ORDER-1234',
-    'result_url' => route('liqpay.result'),
-    'server_url' => route('liqpay.webhook'),
-]);
+    'description' => 'Оплата заказа #'.($a = rand(1000,9999)),
+    'language' => 'ua',
+    'order_id' => 'ORDER-'.$a,
+    'result_url' => config('liqpay.result_url'),
+    'server_url' => config('app.url').config('liqpay.server_url'),
+]));
 
 return redirect($url);
 ```
@@ -124,7 +127,13 @@ class HandleLiqpayPaymentSucceeded
 ```
 Событие имеет свойство `dto`, являющееся [объектом](/src/DTO/LiqPayWebhookDto.php).
 
-
+Вы также можете включить встроенный обработчик события `LiqpayWebhookReceived` для логирования всех входящих вебхуков, зарегистрировав в `app/Providers/EventServiceProvider.php` в методе `boot` следующим образом:
+```php
+Event::listen(
+    \Alyakin\LiqPayLaravel\Events\LiqpayWebhookReceived::class,
+    \Alyakin\LiqPayLaravel\Listeners\LogLiqPayWebhook::class,
+);
+```
 
 
 ## Тестирование

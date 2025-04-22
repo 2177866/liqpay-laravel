@@ -22,6 +22,7 @@ class LiqPayServiceProvider extends ServiceProvider
         //     __DIR__.'/../database/migrations/create_liqpay_logs_table.php.stub' =>
         //     database_path('migrations/' . date('Y_m_d_His', time()) . '_create_liqpay_logs_table.php'),
         // ], 'liqpay-migrations');
+
         $this->loadRoutesFrom(__DIR__.'/../routes/webhook.php');
 
         $this->publishes([
