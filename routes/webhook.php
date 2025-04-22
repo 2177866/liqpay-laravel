@@ -3,5 +3,8 @@
 use Alyakin\LiqPayLaravel\Http\Controllers\LiqPayWebhookController;
 use Illuminate\Support\Facades\Route;
 
-Route::post('/api/liqpay/webhook', [LiqPayWebhookController::class, 'handle'])
+/** @var string $server_url */
+$server_url = config('liqpay.server_url');
+
+Route::post($server_url, [LiqPayWebhookController::class, 'handle'])
     ->name('liqpay.webhook');

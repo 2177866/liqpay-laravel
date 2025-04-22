@@ -37,7 +37,7 @@
 Добавьте пакет через Composer:
 
 ```
-composer require 2177866/liqpay-laravel
+composer require alyakin/liqpay-laravel
 ```
 
 Публикация конфигурации:
@@ -53,6 +53,8 @@ php artisan vendor:publish --tag=liqpay-config
 - `public_key` — публичный ключ от LiqPay
 - `private_key` — приватный ключ от LiqPay
 - `sandbox` — режим песочницы (`true`/`false`)
+- `result_url` — ссылка для перенаправления пользователя после оплаты
+- `server_url` — ссылка для программного уведомления (webhook)
 
 Все параметры можно переопределить через `.env` файл:
 
@@ -60,6 +62,8 @@ php artisan vendor:publish --tag=liqpay-config
 LIQPAY_PUBLIC_KEY=your_public_key
 LIQPAY_PRIVATE_KEY=your_private_key
 LIQPAY_SANDBOX=true
+LIQPAY_RESULT_URL="${APP_URL}/billing"
+LIQPAY_SERVER_URL="/api/liqpay/webhook"
 ```
 
 ## Использование
@@ -85,36 +89,50 @@ return redirect($url);
 
 ### Обработка webhook от LiqPay
 
-Создайте маршрут в `routes/web.php` или `api.php`:
+Пакет автоматически регистрирует маршрут `/api/liqpay/webhook` (маршрут из конфига)  и включает в себя обработчик поступивших запросов.
 
-```
-Route::post('/liqpay/webhook', WebhookController::class);
-```
+при срабатывании webhook вызываются события:
 
-Контроллер может выглядеть так:
+- `LiqpayWebhookReceived` - возникает при получении ЛЮБОГО webhook от LiqPay
 
-```
-use LiqPay\Laravel\Http\Requests\LiqPayWebhookRequest;
+после вызова общего события будут вызваны события соответствующие статусам:
 
-class WebhookController extends Controller
+- `LiqpayPaymentFailed` - возникает при неудачной оплате
+- `LiqpayPaymentSucceeded` - возникает при успешной оплате
+- `LiqpayPaymentWaiting` - возникает при ожидании оплаты
+- `LiqpayReversed` - возникает при отмене платежа
+- `LiqpaySubscribed` - возникает при подписке на платежи
+- `LiqpayUnsubscribed` - возникает при отписке от платежей
+
+Для обработки этих событий в вашем Laravel приложении, вы можете зарегистрировать соответствующие слушатели событий.
+
+Пример регистрации слушателя для события `LiqpayPaymentSucceeded`:
+
+```php
+namespace App\Listeners;
+
+use Alyakin\LiqpayLaravel\Events\LiqpayPaymentSucceeded;
+
+class HandleLiqpayPaymentSucceeded
 {
-    public function __invoke(LiqPayWebhookRequest $request): Response
+    public function handle(LiqpayPaymentSucceeded $event)
     {
-        $dto = $request->toDto();
-
-        // Логика обработки оплаты по $dto->order_id, $dto->status и др.
-
-        return response('OK');
+        \Log::debug(__method__, $event->dto->toArray());
+        // Ваш код обработки успешной оплаты
     }
 }
 ```
+Событие имеет свойство `dto`, являющееся [объектом](/src/DTO/LiqPayWebhookDto.php).
+
+
+
 
 ## Тестирование
 
-```
+```shell
 composer test
 ```
 
 ## Лицензия
 
-MIT. См. файл LICENSE (будет добавлен).
+MIT.

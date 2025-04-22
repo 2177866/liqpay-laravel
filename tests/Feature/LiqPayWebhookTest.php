@@ -25,7 +25,10 @@ class LiqPayWebhookTest extends TestCase
         $privateKey = config('liqpay.private_key');
         $signature = LiqPaySignatureValidator::generate($data, $privateKey);
 
-        $response = $this->postJson('/api/liqpay/webhook', [
+        /** @var string $server_url */
+        $server_url = config('liqpay.server_url');
+
+        $response = $this->postJson($server_url, [
             'data' => $data,
             'signature' => $signature,
         ]);
@@ -46,7 +49,10 @@ class LiqPayWebhookTest extends TestCase
 
         $signature = 'invalidsignature';
 
-        $response = $this->postJson('/api/liqpay/webhook', [
+        /** @var string $server_url */
+        $server_url = config('liqpay.server_url');
+
+        $response = $this->postJson($server_url, [
             'data' => $data,
             'signature' => $signature,
         ]);
