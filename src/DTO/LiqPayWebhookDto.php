@@ -3,6 +3,7 @@
 namespace Alyakin\LiqPayLaravel\DTO;
 
 use Alyakin\LiqPayLaravel\Support\BaseDto;
+use Alyakin\LiqPayLaravel\Support\Traits\HasDynamicAttributes;
 
 /**
  * Class LiqPayWebhookDto
@@ -69,6 +70,8 @@ use Alyakin\LiqPayLaravel\Support\BaseDto;
  */
 class LiqPayWebhookDto extends BaseDto
 {
+    use HasDynamicAttributes;
+
     public function __construct(
         public ?int $version = null,
         public ?string $public_key = null,
