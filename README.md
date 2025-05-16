@@ -11,51 +11,49 @@
 [![Larastan](https://github.com/2177866/liqpay-laravel/actions/workflows/larastan.yml/badge.svg)](https://github.com/2177866/liqpay-laravel/actions/workflows/larastan.yml)
 
 
-Пакет для интеграции LiqPay в Laravel приложение. Позволяет формировать ссылки для оплаты, подписывать запросы, а также обрабатывать и валидировать входящие webhook-события от LiqPay.
+Package for integrating LiqPay into Laravel application. It allows generating payment links, signing requests, and handling incoming webhook events from LiqPay.
 
 ---
 
-## Содержание
+## Table of Contents
 
-- [Требования](#требования)
-- [Установка](#установка)
-- [Конфигурация](#конфигурация)
-- [Использование](#использование)
-  - [Формирование ссылки для оплаты](#формирование-ссылки-для-оплаты)
-  - [Обработка webhook от LiqPay](#обработка-webhook-от-liqpay)
-- [Тестирование](#тестирование)
-- [Лицензия](#лицензия)
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Usage](#usage)
+    - [Generating Payment Link](#generating-payment-link)
+    - [Handling LiqPay Webhook](#handling-liqpay-webhook)
+- [Testing](#testing)
+- [License](#license)
 
 
-## Требования
-
+## Requirements
 - PHP 8.1+
 - Laravel 9+
 
-## Установка
+## Installation
 
-Добавьте пакет через Composer:
-
+Add the package via Composer:
 ```shell
 composer require alyakin/liqpay-laravel
 ```
 
-Публикация конфигурации:
+Publishing Configuration:
 
 ```shell
 php artisan vendor:publish --tag=liqpay-config
 ```
 
-## Конфигурация
+## Configuration
 
-После публикации файл конфигурации `config/liqpay.php` содержит:
+After publishing, the configuration file `config/liqpay.php` contains:
 
-- `public_key` — публичный ключ от LiqPay
-- `private_key` — приватный ключ от LiqPay
-- `result_url` — ссылка для перенаправления пользователя после оплаты
-- `server_url` — ссылка для программного уведомления (webhook)
+- `public_key` — public key from LiqPay
+- `private_key` — private key from LiqPay
+- `result_url` — URL to redirect the user after payment
+- `server_url` — URL for programmatic notifications (webhook)
 
-Все параметры можно переопределить через `.env` файл:
+All parameters can be overridden via the `.env` file:
 
 ```shell
 LIQPAY_PUBLIC_KEY=your_public_key
@@ -64,9 +62,9 @@ LIQPAY_RESULT_URL="${APP_URL}/billing"
 LIQPAY_SERVER_URL="/api/liqpay/webhook"
 ```
 
-## Использование
+## Usage
 
-### Формирование ссылки для оплаты
+### Generating Payment Link
 
 ```php
 use Alyakin\LiqPayLaravel\Contracts\LiqPayServiceInterface as LiqPay;
@@ -80,7 +78,7 @@ $url = $liqpay->getPaymentUrl(LiqPayRequestDto::fromArray([
     'action' => 'pay',
     'amount' => 100,
     'currency' => 'UAH',
-    'description' => 'Оплата заказа #'.($a = rand(1000,9999)),
+    'description' => 'Payment #'.($a = rand(1000,9999)),
     'language' => 'ua',
     'order_id' => 'ORDER-'.$a,
     'result_url' => config('liqpay.result_url'),
@@ -90,26 +88,26 @@ $url = $liqpay->getPaymentUrl(LiqPayRequestDto::fromArray([
 return redirect($url);
 ```
 
-### Обработка webhook от LiqPay
+### Handling LiqPay Webhook
 
-Пакет автоматически регистрирует маршрут `/api/liqpay/webhook` (маршрут из конфига)  и включает в себя обработчик поступивших запросов.
+The package automatically registers the route `/api/liqpay/webhook` (route from the config) and includes a handler for incoming requests.
 
-при срабатывании webhook вызываются события:
+When the webhook is triggered, the following events are fired:
 
-- `LiqpayWebhookReceived` - возникает при получении ЛЮБОГО webhook от LiqPay
+- `LiqpayWebhookReceived` - occurs when ANY webhook from LiqPay is received
 
-после вызова общего события будут вызваны события соответствующие статусам:
+After the general event is called, events corresponding to statuses will be triggered:
 
-- `LiqpayPaymentFailed` - возникает при неудачной оплате
-- `LiqpayPaymentSucceeded` - возникает при успешной оплате
-- `LiqpayPaymentWaiting` - возникает при ожидании оплаты
-- `LiqpayReversed` - возникает при отмене платежа
-- `LiqpaySubscribed` - возникает при подписке на платежи
-- `LiqpayUnsubscribed` - возникает при отписке от платежей
+- `LiqpayPaymentFailed` - occurs on payment failure
+- `LiqpayPaymentSucceeded` - occurs on successful payment
+- `LiqpayPaymentWaiting` - occurs when payment is pending
+- `LiqpayReversed` - occurs when a payment is reversed
+- `LiqpaySubscribed` - occurs when subscribed to payments
+- `LiqpayUnsubscribed` - occurs when unsubscribed from payments
 
-Для обработки этих событий в вашем Laravel приложении, вы можете зарегистрировать соответствующие слушатели событий.
+To handle these events in your Laravel application, you can register corresponding event listeners.
 
-Пример регистрации слушателя для события `LiqpayPaymentSucceeded`:
+Example of registering a listener for the `LiqpayPaymentSucceeded` event:
 
 ```php
 namespace App\Listeners;
@@ -120,14 +118,17 @@ class HandleLiqpayPaymentSucceeded
 {
     public function handle(LiqpayPaymentSucceeded $event)
     {
+
         \Log::debug(__method__, $event->dto->toArray());
-        // Ваш код обработки успешной оплаты
+        // Your code for handling successful payment
     }
 }
 ```
-Событие имеет свойство `dto`, являющееся [объектом](/src/DTO/LiqPayWebhookDto.php).
 
-Вы также можете включить встроенный обработчик события `LiqpayWebhookReceived` для логирования всех входящих вебхуков, зарегистрировав в `app/Providers/EventServiceProvider.php` в методе `boot` следующим образом:
+The event has a property `dto`, which is an [object](/src/DTO/LiqPayWebhookDto.php).
+
+You can also enable the built-in event handler `LiqpayWebhookReceived` to log all incoming webhooks by registering in `app/Providers/EventServiceProvider.php` in the `boot` method as follows:
+
 ```php
 Event::listen(
     \Alyakin\LiqPayLaravel\Events\LiqpayWebhookReceived::class,
@@ -136,12 +137,15 @@ Event::listen(
 ```
 
 
-## Тестирование
+## Testing
 
+All tests can be found in the folder with [`tests`](/tests/)
+
+To run the tests, use the command
 ```shell
 composer test
 ```
 
-## Лицензия
+## License
 
-MIT.
+This package is distributed under the [MIT License](/LICENSE).
