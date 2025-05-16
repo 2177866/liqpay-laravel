@@ -1,4 +1,4 @@
-# liqpay-laravel
+# Laravel package for LiqPay integration (liqpay-laravel)
 
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/alyakin/liqpay-laravel.svg)](https://packagist.org/packages/alyakin/liqpay-laravel)
 [![Downloads](https://img.shields.io/packagist/dt/alyakin/liqpay-laravel.svg)](https://packagist.org/packages/alyakin/liqpay-laravel)
