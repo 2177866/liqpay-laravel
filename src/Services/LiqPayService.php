@@ -7,7 +7,6 @@ use Alyakin\LiqPayLaravel\DTO\LiqPayRequestDto;
 use Alyakin\LiqPayLaravel\DTO\LiqPayWebhookDto;
 use Alyakin\LiqPayLaravel\Helpers\LiqPaySignatureValidator;
 use Illuminate\Support\Facades\Config;
-use RuntimeException;
 
 class LiqPayService implements LiqPayServiceInterface
 {
@@ -17,7 +16,7 @@ class LiqPayService implements LiqPayServiceInterface
     {
         $json = json_encode($dto->toArray(), JSON_UNESCAPED_UNICODE);
         if ($json === false) {
-            throw new \RuntimeException('JSON encode failed');
+            throw new \UnexpectedValueException('JSON encode failed');
         }
 
         $data = base64_encode($json);
@@ -36,15 +35,16 @@ class LiqPayService implements LiqPayServiceInterface
         $privateKey = Config::get('liqpay.private_key');
 
         if (! LiqPaySignatureValidator::verify($data, $signature, $privateKey)) {
-            throw new RuntimeException('Invalid LiqPay signature');
+            throw new \UnexpectedValueException('Invalid LiqPay signature');
         }
 
         $decoded = json_decode(base64_decode($data), true);
 
         if (! is_array($decoded)) {
-            throw new RuntimeException('Invalid LiqPay JSON payload');
+            throw new \UnexpectedValueException('Invalid LiqPay JSON payload');
         }
 
+        /** @var array<string,mixed> $decoded */
         return LiqPayWebhookDto::fromArray($decoded);
     }
 }
