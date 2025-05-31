@@ -44,7 +44,14 @@ composer require alyakin/liqpay-laravel
 
 ```shell
 php artisan vendor:publish --tag=liqpay-config
+php artisan vendor:publish --tag=liqpay-migrations
 ```
+Проверьте созданные файлы конфигурации и миграции, внесите изменения, и потом выполните
+
+```shell
+php artisan migrate
+```
+
 
 ## Конфигурация
 

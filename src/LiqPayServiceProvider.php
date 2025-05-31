@@ -28,6 +28,14 @@ class LiqPayServiceProvider extends ServiceProvider
         $this->publishes([
             __DIR__.'/../config/liqpay.php' => config_path('liqpay.php'),
         ], 'liqpay-config');
+
+        if ($this->app->runningInConsole()) {
+            $this->publishes([
+                __DIR__.'/../Database/migrations/create_liqpay_subscriptions_table.php.stub' =>
+                    database_path('migrations/'.date('Y_m_d_His').'_create_liqpay_subscriptions_table.php'),
+            ], 'liqpay-migrations');
+        }
+
         LiqPayCustomValidators::register();
     }
 }
