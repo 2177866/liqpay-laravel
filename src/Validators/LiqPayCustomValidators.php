@@ -1,12 +1,12 @@
 <?php
 
-namespace Alyakin\LiqPayLaravel\Validators;
+namespace Alyakin\LiqpayLaravel\Validators;
 
-use Alyakin\LiqPayLaravel\Helpers\LiqPaySignatureValidator;
+use Alyakin\LiqpayLaravel\Helpers\LiqpaySignatureValidator;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Validator;
 
-class LiqPayCustomValidators
+class LiqpayCustomValidators
 {
     public static function register(): void
     {
@@ -29,7 +29,7 @@ class LiqPayCustomValidators
             /** @var string $privateKey */
             $privateKey = Config::get('liqpay.private_key');
 
-            return LiqPaySignatureValidator::verify($data, $value, $privateKey);
-        }, 'Неверная подпись LiqPay.');
+            return LiqpaySignatureValidator::verify($data, $value, $privateKey);
+        }, 'Неверная подпись Liqpay.');
     }
 }

@@ -1,11 +1,11 @@
 <?php
 
-namespace Alyakin\LiqPayLaravel\Http\Requests;
+namespace Alyakin\LiqpayLaravel\Http\Requests;
 
-use Alyakin\LiqPayLaravel\DTO\LiqPayWebhookDto;
+use Alyakin\LiqpayLaravel\DTO\LiqpayWebhookDto;
 use Illuminate\Foundation\Http\FormRequest;
 
-class LiqPayWebhookRequest extends FormRequest
+class LiqpayWebhookRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -23,7 +23,7 @@ class LiqPayWebhookRequest extends FormRequest
         ];
     }
 
-    public function toDto(): LiqPayWebhookDto
+    public function toDto(): LiqpayWebhookDto
     {
         /** @var string $data */
         $data = $this->input('data');
@@ -33,6 +33,6 @@ class LiqPayWebhookRequest extends FormRequest
         /** @var array<string, mixed> $decoded */
         $decoded = json_decode($json, true);
 
-        return LiqPayWebhookDto::fromArray($decoded);
+        return LiqpayWebhookDto::fromArray($decoded);
     }
 }

@@ -1,11 +1,11 @@
 <?php
 
-namespace Alyakin\LiqPayLaravel\Listeners;
+namespace Alyakin\LiqpayLaravel\Listeners;
 
-use Alyakin\LiqPayLaravel\Events\LiqpayWebhookReceived;
+use Alyakin\LiqpayLaravel\Events\LiqpayWebhookReceived;
 use Illuminate\Support\Facades\Log;
 
-class LogLiqPayWebhook
+class LogLiqpayWebhook
 {
     public function handle(LiqpayWebhookReceived $event): void
     {

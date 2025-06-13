@@ -1,8 +1,8 @@
 <?php
 
-namespace Alyakin\LiqPayLaravel\Helpers;
+namespace Alyakin\LiqpayLaravel\Helpers;
 
-class LiqPaySignatureValidator
+class LiqpaySignatureValidator
 {
     public static function generate(string $data, string $privateKey): string
     {

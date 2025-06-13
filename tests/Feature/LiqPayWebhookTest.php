@@ -2,12 +2,12 @@
 
 namespace Tests\Feature;
 
-use Alyakin\LiqPayLaravel\Events\LiqpayWebhookReceived;
-use Alyakin\LiqPayLaravel\Helpers\LiqPaySignatureValidator;
+use Alyakin\LiqpayLaravel\Events\LiqpayWebhookReceived;
+use Alyakin\LiqpayLaravel\Helpers\LiqpaySignatureValidator;
+use Alyakin\LiqpayLaravel\Tests\TestCase;
 use Illuminate\Support\Facades\Event;
-use Tests\TestCase;
 
-class LiqPayWebhookTest extends TestCase
+class LiqpayWebhookTest extends TestCase
 {
     public function test_valid_webhook_triggers_event(): void
     {
@@ -23,7 +23,7 @@ class LiqPayWebhookTest extends TestCase
         $data = base64_encode($json);
         /** @var string $privateKey */
         $privateKey = config('liqpay.private_key');
-        $signature = LiqPaySignatureValidator::generate($data, $privateKey);
+        $signature = LiqpaySignatureValidator::generate($data, $privateKey);
 
         /** @var string $server_url */
         $server_url = config('liqpay.server_url');

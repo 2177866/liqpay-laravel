@@ -1,14 +1,14 @@
 <?php
 
-namespace Alyakin\LiqPayLaravel\DTO;
+namespace Alyakin\LiqpayLaravel\DTO;
 
-use Alyakin\LiqPayLaravel\Support\BaseDto;
-use Alyakin\LiqPayLaravel\Support\Traits\HasDynamicAttributes;
+use Alyakin\LiqpayLaravel\Support\BaseDto;
+use Alyakin\LiqpayLaravel\Support\Traits\HasDynamicAttributes;
 
 /**
- * Class LiqPayWebhookDto
+ * Class LiqpayWebhookDto
  *
- * DTO для данных, полученных от LiqPay в webhook (callback).
+ * DTO для данных, полученных от Liqpay в webhook (callback).
  *
  * @property int|null $version Версия API. Текущее значение — 3.
  * @property string|null $public_key Публичный ключ магазина.
@@ -17,11 +17,11 @@ use Alyakin\LiqPayLaravel\Support\Traits\HasDynamicAttributes;
  * @property float|null $amount Сумма платежа.
  * @property string|null $currency Валюта платежа.
  * @property string|null $order_id Идентификатор заказа.
- * @property string|null $liqpay_order_id Внутренний order_id в системе LiqPay.
+ * @property string|null $liqpay_order_id Внутренний order_id в системе Liqpay.
  * @property string|null $description Описание платежа.
  * @property string|null $create_date Дата создания платежа.
  * @property string|null $completion_date Дата списания средств.
- * @property int|null $payment_id Уникальный ID платежа в системе LiqPay.
+ * @property int|null $payment_id Уникальный ID платежа в системе Liqpay.
  * @property string|null $paytype Метод оплаты: card, privat24, qr и т.д.
  * @property string|null $err_code Код ошибки, если есть.
  * @property string|null $err_erc Код ошибки ERC.
@@ -68,7 +68,7 @@ use Alyakin\LiqPayLaravel\Support\Traits\HasDynamicAttributes;
  * @property string|null $refund_date_last Последняя дата возврата.
  * @property string|null $verifycode Код верификации.
  */
-class LiqPayWebhookDto extends BaseDto
+class LiqpayWebhookDto extends BaseDto
 {
     use HasDynamicAttributes;
 

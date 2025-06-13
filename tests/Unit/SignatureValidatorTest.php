@@ -2,8 +2,8 @@
 
 namespace Tests\Unit;
 
-use Alyakin\LiqPayLaravel\Helpers\LiqPaySignatureValidator;
-use Tests\TestCase;
+use Alyakin\LiqpayLaravel\Helpers\LiqpaySignatureValidator;
+use Alyakin\LiqpayLaravel\Tests\TestCase;
 
 class SignatureValidatorTest extends TestCase
 {
@@ -21,10 +21,10 @@ class SignatureValidatorTest extends TestCase
         /** @var string $privateKey */
         $privateKey = config('liqpay.private_key');
 
-        $signature = LiqPaySignatureValidator::generate($data, $privateKey);
+        $signature = LiqpaySignatureValidator::generate($data, $privateKey);
 
         $this->assertTrue(
-            LiqPaySignatureValidator::verify($data, $signature, $privateKey),
+            LiqpaySignatureValidator::verify($data, $signature, $privateKey),
         );
     }
 }

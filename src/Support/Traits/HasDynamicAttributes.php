@@ -1,6 +1,6 @@
 <?php
 
-namespace Alyakin\LiqPayLaravel\Support\Traits;
+namespace Alyakin\LiqpayLaravel\Support\Traits;
 
 /**
  * Позволяет DTO сохранять неизвестные поля в _attributes и получать к ним доступ через __get
