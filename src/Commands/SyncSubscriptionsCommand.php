@@ -15,29 +15,24 @@ class SyncSubscriptionsCommand extends Command
         {--to= : End date (YYYY-MM-DD)}
         {--restart : Restart and clear cache}';
 
-    protected $description = 'Sync Liqpay subscriptions archive safely and efficiently';
+    protected $description = 'Sync LiqPay subscriptions archive safely and efficiently';
 
     private const CACHE_FILE_KEY = 'liqpay:sync:file';
 
-    private const CACHE_LINE_KEY = 'liqpay:sync:line';
+    private const CACHE_INDEX_KEY = 'liqpay:sync:index';
 
     /**
      * Execute the console command.
      */
     public function handle(): int
     {
-        /** @var string $from date in format "YYYY-mm-dd" */
-        $from = $this->option('from') ?? config('liqpay.archive_from') ?? now()->subMonth()->toDateString().'';
+        $from = ''.($this->option('from') ?? config('liqpay.archive_from') ?? now()->subMonth()->toDateString());
+        $to = ''.($this->option('to') ?? config('liqpay.archive_to') ?? now()->toDateString());
+        $restart = (bool) ($this->option('restart') ?? false);
 
-        /** @var string $to date in format "YYYY-mm-dd" */
-        $to = $this->option('to') ?? config('liqpay.archive_to') ?? now()->toDateString().'';
+        [$filePath, $startIndex] = $this->getOrDownloadArchive($from, $to, $restart);
 
-        /** @var bool $restart */
-        $restart = $this->option('restart') ?? false;
-
-        [$filePath, $startLine] = $this->getOrDownloadArchive($from, $to, $restart);
-
-        $processed = $this->processArchiveByChunks($filePath, $startLine);
+        $processed = $this->processArchive($filePath, $startIndex);
         if (! $processed) {
             return self::FAILURE;
         }
@@ -48,12 +43,10 @@ class SyncSubscriptionsCommand extends Command
         return self::SUCCESS;
     }
 
-    /** Retrieves the archive file path and start line, downloading if necessary.
+    /**
+     * Получает путь к архиву и индекс последней успешно обработанной записи.
      *
-     * @param  string  $from  Start date in "YYYY-MM-DD" format.
-     * @param  string  $to  End date in "YYYY-MM-DD" format.
-     * @param  bool  $restart  Whether to clear cache and restart the process.
-     * @return array{string, int} Returns an array with file path and start line.
+     * @return array{string, int}
      */
     private function getOrDownloadArchive(string $from, string $to, bool $restart): array
     {
@@ -61,108 +54,102 @@ class SyncSubscriptionsCommand extends Command
             $this->clearCacheOnFinish();
         }
 
-        /** @var string $filePath */
-        $filePath = Cache::get(self::CACHE_FILE_KEY);
-        /** @var int $startLine */
-        $startLine = Cache::get(self::CACHE_LINE_KEY, 0);
+        $filePath = ''.Cache::get(self::CACHE_FILE_KEY);
+        /** @var int $startIndex */
+        $startIndex = Cache::get(self::CACHE_INDEX_KEY, 0);
 
         if ($filePath && ! Storage::exists($filePath)) {
             $this->clearCacheOnFinish();
             $filePath = null;
-            $startLine = 0;
+            $startIndex = 0;
         }
 
         if (! $filePath) {
-            $filePath = $this->downloadArchiveCsv($from, $to);
-            $startLine = 0;
+            $filePath = $this->downloadArchive($from, $to);
+            $startIndex = 0;
             Cache::put(self::CACHE_FILE_KEY, $filePath, $this->getCacheTtl());
-            Cache::put(self::CACHE_LINE_KEY, $startLine, $this->getCacheTtl());
+            Cache::put(self::CACHE_INDEX_KEY, $startIndex, $this->getCacheTtl());
             $this->info(__('liqpay-laravel::messages.archive_downloaded', ['file' => $filePath]));
         } else {
             $this->info(__('liqpay-laravel::messages.archive_continue', [
                 'file' => $filePath,
-                'line' => $startLine,
+                'line' => $startIndex,
             ]));
         }
 
-        return [$filePath, $startLine];
+        return [$filePath, $startIndex];
     }
 
-    private function downloadArchiveCsv(string $from, string $to): string
+    /**
+     * Загружает архив с сервера и сохраняет его локально.
+     */
+    private function downloadArchive(string $from, string $to): string
     {
-        /** @var LiqpayService $liqpay */
         $liqpay = app(LiqpayService::class);
-        /** @var string $response
-         * @throws \RuntimeException
-         */
         $response = $liqpay->api('request', [
-            'action' => 'payments',
+            'action' => 'reports',
             'date_from' => $from,
             'date_to' => $to,
-            'resp_format' => 'csv',
+            'resp_format' => 'json',
         ], false);
 
         if (! $response || ! is_string($response)) {
             throw new \RuntimeException(__('liqpay-laravel::messages.download_failed'));
         }
 
-        if (strpos($response, 'action,status,order_id') === false) {
-            throw new \RuntimeException(__('liqpay-laravel::messages.download_failed'));
-        }
-
-        $filename = 'liqpay-archive/'.uniqid('archive_', true).'.csv';
+        $filename = 'liqpay-archive/'.uniqid('archive_', true).'.json';
         Storage::put($filename, $response);
 
         return $filename;
     }
 
-    private function processArchiveByChunks(string $filePath, int $startLine): bool
+    /**
+     * Обрабатывает архив — поэлементно, быстро и экономно по памяти.
+     */
+    private function processArchive(string $filePath, int $startIndex): bool
     {
         $fullPath = Storage::path($filePath);
-        $handle = fopen($fullPath, 'rb');
-        if (! $handle) {
+        $json = file_get_contents($fullPath);
+        if ($json === false) {
             $this->error(__('liqpay-laravel::messages.file_open_failed', ['file' => $fullPath]));
 
             return false;
         }
 
-        $count = 0;
-        $currentLine = 0;
-        $header = null;
-
-        // Получаем header (всегда первая строка)
-        if (($header = fgetcsv($handle)) === false) {
-            $this->error(__('liqpay-laravel::messages.csv_header_missing'));
-            fclose($handle);
+        /** @var array{data:mixed, signature:string} $data */
+        $data = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
+        if (! isset($data['data']) || ! is_array($data['data'])) {
+            $this->error(__('liqpay-laravel::messages.malformed_archive'));
 
             return false;
         }
-        $currentLine++;
 
-        // Если startLine > 1 — смещаемся на нужную строку
-        while ($currentLine < $startLine + 1 && ($row = fgetcsv($handle)) !== false) {
-            $currentLine++;
-        }
+        $payments = $data['data'];
+        $count = 0;
 
-        while (($row = fgetcsv($handle)) !== false) {
-            $currentLine++;
-            $payment = array_combine($header, $row);
+        // Используем ленивую коллекцию для экономии памяти при больших архивах
+        $paymentsLazy = \Illuminate\Support\LazyCollection::make(function () use ($payments, $startIndex) {
+            $len = count($payments);
+            for ($i = $startIndex; $i < $len; $i++) {
+                yield $i => $payments[$i];
+            }
+        });
+
+        foreach ($paymentsLazy as $i => $payment) {
             try {
-                $this->processCsvPayment($payment);
+                $this->processPayment($payment);
             } catch (\Throwable $e) {
                 $this->error(__('liqpay-laravel::messages.error_at_line', [
-                    'line' => $currentLine,
+                    'line' => $i,
                     'msg' => $e->getMessage(),
                 ]));
-                $this->setArchiveProgress($currentLine);
-                fclose($handle);
+                $this->setArchiveProgress($i);
 
                 return false;
             }
-            $this->setArchiveProgress($currentLine);
+            $this->setArchiveProgress($i);
             $count++;
         }
-        fclose($handle);
 
         $this->info(__('liqpay-laravel::messages.processed_payments', ['count' => $count]));
 
@@ -170,9 +157,27 @@ class SyncSubscriptionsCommand extends Command
     }
 
     /**
-     * @param  array<string, string>  $payment
+     * Основная бизнес-логика обработки записи архива.
+     *
+    /**
+     * Class SyncSubscriptionsCommand
+     *
+     * This command handles the synchronization of subscriptions.
+     *
+     * @param array{
+     *  action:?string,
+     *  status:?string,
+     *  order_id:?string,
+     *  amount:?int,
+     *  currency:?string,
+     *  description:?string,
+     *  liqpay_order_id:?string,
+     *  payment_id:?string,
+     *  create_date:?int,
+     *  info:?string
+     * } $payment An associative array containing payment details.
      */
-    private function processCsvPayment(array $payment): void
+    private function processPayment(array $payment): void
     {
         $action = $payment['action'] ?? null;
         $status = $payment['status'] ?? null;
@@ -181,27 +186,28 @@ class SyncSubscriptionsCommand extends Command
         if (! $orderId || ! in_array($action, ['subscribe', 'regular'], true)) {
             return;
         }
-        /* @var LiqpaySubscription $subscription */
+
+        /** @var LiqpaySubscription $subscription */
         $subscription = LiqpaySubscription::withTrashed()->firstOrNew(
             ['order_id' => $orderId],
-            ['amount' => $payment['amount'], 'currency' => $payment['currency']]
+            ['amount' => $payment['amount'] ?? null, 'currency' => $payment['currency'] ?? null]
         );
 
         if ($action === 'subscribe') {
             if ($status === 'subscribed') {
                 $subscription->fill($this->mapSubscriptionFields($payment));
-                $subscription->info = $this->tryDecodeInfo($payment['info']) ?? null;
+                $subscription->info = $this->tryDecodeInfo($payment['info'] ?? null) ?? null;
                 $subscription->status = 'active';
                 $subscription->liqpay_data = $payment;
                 $subscription->save();
             } elseif ($status === 'unsubscribed') {
                 $subscription->status = 'inactive';
-                $subscription->expired_at = $this->tsToDatetime($payment['create_date'] ?? null);
+                $subscription->expired_at = $payment['create_date'] ? $this->tsToDatetime((string) $payment['create_date']) : null;
                 $subscription->save();
             }
         } elseif ($action === 'regular' && $status === 'success') {
             $current = $subscription->last_paid_at;
-            $newDate = $payment['create_date'];
+            $newDate = $payment['create_date'] ? $this->tsToDatetime((string) $payment['create_date']) : null;
             if (! $current || \Carbon\Carbon::parse($newDate)->gt($current)) {
                 $subscription->last_paid_at = $newDate;
                 $subscription->last_payment_id = $payment['payment_id'] ?? null;
@@ -210,9 +216,10 @@ class SyncSubscriptionsCommand extends Command
         }
     }
 
-    /** Maps relevant fields from the payment data to the subscription model.
+    /**
+     * Маппинг полей для fill().
      *
-     * @param  array<string, string>  $payment
+     * @param  array<string, mixed>  $payment
      * @return array<string, mixed>
      */
     protected function mapSubscriptionFields(array $payment): array
@@ -222,7 +229,8 @@ class SyncSubscriptionsCommand extends Command
         ])->toArray();
     }
 
-    /** Attempts to decode the 'info' field from the payment data.
+    /**
+     * Безопасное декодирование info.
      *
      * @return array<string, mixed>|null
      */
@@ -231,10 +239,8 @@ class SyncSubscriptionsCommand extends Command
         if (empty($info)) {
             return null;
         }
-        // Удаляем BOM и невидимые символы
         $clean = trim($info, " \t\n\r\0\x0B\xEF\xBB\xBF");
         try {
-            // Пробуем декодировать JSON
             $decoded = json_decode($clean, true, 512, JSON_THROW_ON_ERROR);
         } catch (\JsonException $e) {
             $this->error(__('liqpay-laravel::messages.json_decode_error', ['error' => $e->getMessage()]));
@@ -251,14 +257,15 @@ class SyncSubscriptionsCommand extends Command
             return null;
         }
 
+        // LiqPay timestamp — миллисекунды!
         return \Carbon\Carbon::createFromTimestampMs((int) $ts)->toDateTimeString();
     }
 
     // === Cache Helpers ===
 
-    private function setArchiveProgress(int $line): void
+    private function setArchiveProgress(int $index): void
     {
-        Cache::put(self::CACHE_LINE_KEY, $line, $this->getCacheTtl());
+        Cache::put(self::CACHE_INDEX_KEY, $index, $this->getCacheTtl());
     }
 
     private function clearCacheOnFinish(): void
@@ -268,14 +275,14 @@ class SyncSubscriptionsCommand extends Command
         if ($file && Storage::exists($file)) {
             Storage::delete($file);
         }
-        Cache::forget(self::CACHE_LINE_KEY);
+        Cache::forget(self::CACHE_INDEX_KEY);
     }
 
     private function getCacheTtl(): int
     {
         /** @var int $ttl */
-        $ttl = config('liqpay.cache_ttl', 86400);
+        $ttl = config('liqpay.cache_ttl', 86400); // Default to 1 day
 
-        return (int) $ttl; // default: 1 day
+        return (int) $ttl;
     }
 }
