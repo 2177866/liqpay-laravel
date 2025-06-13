@@ -32,7 +32,12 @@ class SyncSubscriptionsCommand extends Command
 
         [$filePath, $startIndex] = $this->getOrDownloadArchive($from, $to, $restart);
 
-        $processed = $this->processArchive($filePath, $startIndex);
+        try {
+            $processed = $this->processArchive($filePath, $startIndex);
+        } catch (\JsonException $e) {
+            return self::FAILURE;
+        }
+
         if (! $processed) {
             return self::FAILURE;
         }

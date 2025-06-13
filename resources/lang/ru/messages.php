@@ -6,7 +6,7 @@ return [
     'archive_continue' => 'Продолжаем с файла: :file, строка: :line',
     'download_failed' => 'Ошибка скачивания архива или архив пуст.',
     'file_open_failed' => 'Не удалось открыть файл: :file',
-    'csv_header_missing' => 'Заголовок CSV отсутствует.',
+    'malformed_archive' => 'Неправильный формат архива, ожидается JSON.',
     'error_at_line' => 'Ошибка на строке :line: :msg',
     'processed_payments' => 'Обработано платежей: :count.',
     'json_decode_error' => 'Ошибка декодирования JSON: :error',

@@ -192,6 +192,6 @@ class SyncSubscriptionsCommandTest extends TestCase
     private function saveJsonFixture(string $filename): void
     {
         $data = json_encode(['result' => 'success', 'data' => $this->jsonFixture], JSON_PRETTY_PRINT);
-        Storage::put($filename, '' . $data);
+        Storage::put($filename, ''.$data);
     }
 }
