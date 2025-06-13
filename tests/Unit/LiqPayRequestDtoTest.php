@@ -2,14 +2,14 @@
 
 namespace Tests\Unit;
 
-use Alyakin\LiqPayLaravel\DTO\LiqPayRequestDto;
-use Tests\TestCase;
+use Alyakin\LiqpayLaravel\DTO\LiqpayRequestDto;
+use Alyakin\LiqpayLaravel\Tests\TestCase;
 
-class LiqPayRequestDtoTest extends TestCase
+class LiqpayRequestDtoTest extends TestCase
 {
     public function test_array_serialization(): void
     {
-        $dto = new LiqPayRequestDto(
+        $dto = new LiqpayRequestDto(
             version: '3',
             public_key: 'pk',
             action: 'pay',

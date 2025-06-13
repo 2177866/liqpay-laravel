@@ -1,13 +1,13 @@
 <?php
 
-namespace Alyakin\LiqPayLaravel\DTO;
+namespace Alyakin\LiqpayLaravel\DTO;
 
-use Alyakin\LiqPayLaravel\Support\BaseDto;
+use Alyakin\LiqpayLaravel\Support\BaseDto;
 
 /**
- * Class LiqPayRequestDto
+ * Class LiqpayRequestDto
  *
- * DTO для формирования ссылки на оплату через LiqPay.
+ * DTO для формирования ссылки на оплату через Liqpay.
  *
  * Полный список параметров согласно официальной документации:
  * https://www.liqpay.ua/documentation/api/aquiring/checkout/doc
@@ -45,7 +45,7 @@ use Alyakin\LiqPayLaravel\Support\BaseDto;
  * @property string|null $product_name Название товара.
  * @property string|null $product_url URL страницы товара.
  */
-class LiqPayRequestDto extends BaseDto
+class LiqpayRequestDto extends BaseDto
 {
     public function __construct(
         public string $version,

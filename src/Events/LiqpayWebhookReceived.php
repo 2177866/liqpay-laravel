@@ -1,14 +1,14 @@
 <?php
 
-namespace Alyakin\LiqPayLaravel\Events;
+namespace Alyakin\LiqpayLaravel\Events;
 
-use Alyakin\LiqPayLaravel\DTO\LiqPayWebhookDto;
+use Alyakin\LiqpayLaravel\DTO\LiqpayWebhookDto;
 
 /**
  * Class LiqpayWebhookReceived
- * Событие при любом успешном получении webhook от LiqPay.
+ * Событие при любом успешном получении webhook от Liqpay.
  */
 class LiqpayWebhookReceived
 {
-    public function __construct(public readonly LiqPayWebhookDto $dto) {}
+    public function __construct(public readonly LiqpayWebhookDto $dto) {}
 }

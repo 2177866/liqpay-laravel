@@ -2,15 +2,15 @@
 
 namespace Tests\Unit;
 
-use Alyakin\LiqPayLaravel\DTO\LiqPayRequestDto;
-use Alyakin\LiqPayLaravel\Services\LiqPayService;
-use Tests\TestCase;
+use Alyakin\LiqpayLaravel\DTO\LiqpayRequestDto;
+use Alyakin\LiqpayLaravel\Services\LiqpayService;
+use Alyakin\LiqpayLaravel\Tests\TestCase;
 
-class LiqPayServiceTest extends TestCase
+class LiqpayServiceTest extends TestCase
 {
     public function test_it_generates_payment_url(): void
     {
-        $dto = new LiqPayRequestDto(
+        $dto = new LiqpayRequestDto(
             version: '3',
             public_key: 'test_public',
             action: 'pay',
@@ -20,7 +20,7 @@ class LiqPayServiceTest extends TestCase
             description: 'Test'
         );
 
-        $service = new LiqPayService;
+        $service = new LiqpayService;
         $url = $service->getPaymentUrl($dto);
 
         $this->assertStringContainsString('https://www.liqpay.ua/api/3/checkout', $url);

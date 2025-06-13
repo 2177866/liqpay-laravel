@@ -1,9 +1,9 @@
 {
     "name": "alyakin/liqpay-laravel",
-    "description": "Laravel package for LiqPay integration",
+    "description": "Laravel package for Liqpay integration",
     "keywords": [
         "alyakin",
-        "LiqPay",
+        "Liqpay",
         "laravel",
         "payment"
     ],
@@ -23,24 +23,24 @@
       "ext-json": "*"
     },
     "require-dev": {
-        "orchestra/testbench": "*",
+        "orchestra/testbench": "^8.35",
         "larastan/larastan": "*",
         "laravel/pint": "*"
     },
     "autoload": {
       "psr-4": {
-        "Alyakin\\LiqPayLaravel\\": "src/"
+        "Alyakin\\LiqpayLaravel\\": "src/"
       }
     },
     "autoload-dev": {
-      "psr-4": {
-        "Tests\\": "tests/"
-      }
+        "psr-4": {
+          "Alyakin\\LiqpayLaravel\\Tests\\": "tests/"
+        }
     },
     "extra": {
         "laravel": {
             "providers": [
-                "Alyakin\\LiqPayLaravel\\LiqPayServiceProvider"
+                "Alyakin\\LiqpayLaravel\\LiqpayServiceProvider"
             ]
         }
     },

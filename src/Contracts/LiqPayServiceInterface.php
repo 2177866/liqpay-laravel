@@ -1,13 +1,13 @@
 <?php
 
-namespace Alyakin\LiqPayLaravel\Contracts;
+namespace Alyakin\LiqpayLaravel\Contracts;
 
-use Alyakin\LiqPayLaravel\DTO\LiqPayRequestDto;
-use Alyakin\LiqPayLaravel\DTO\LiqPayWebhookDto;
+use Alyakin\LiqpayLaravel\DTO\LiqpayRequestDto;
+use Alyakin\LiqpayLaravel\DTO\LiqpayWebhookDto;
 
-interface LiqPayServiceInterface
+interface LiqpayServiceInterface
 {
-    public function getPaymentUrl(LiqPayRequestDto $dto): string;
+    public function getPaymentUrl(LiqpayRequestDto $dto): string;
 
-    public function decodeWebhook(string $data, string $signature): LiqPayWebhookDto;
+    public function decodeWebhook(string $data, string $signature): LiqpayWebhookDto;
 }

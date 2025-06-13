@@ -2,9 +2,9 @@
 
 namespace Tests\Unit;
 
-use Alyakin\LiqPayLaravel\Helpers\LiqPaySignatureValidator;
+use Alyakin\LiqpayLaravel\Helpers\LiqpaySignatureValidator;
+use Alyakin\LiqpayLaravel\Tests\TestCase;
 use Illuminate\Support\Facades\Validator;
-use Tests\TestCase;
 
 class CustomValidationRulesTest extends TestCase
 {
@@ -28,7 +28,7 @@ class CustomValidationRulesTest extends TestCase
         /** @var string $privateKey */
         $privateKey = config('liqpay.private_key');
 
-        $signature = LiqPaySignatureValidator::generate($data, $privateKey);
+        $signature = LiqpaySignatureValidator::generate($data, $privateKey);
 
         $validator = Validator::make([
             'data' => $data,
