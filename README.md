@@ -20,9 +20,12 @@ A package for integrating Liqpay into a Laravel application. It allows you to ge
 - [Installation](#installation)
 - [Configuration](#configuration)
 - [Usage](#usage)
-    - [Generating a payment link](#generating-a-payment-link)
-    - [Handling webhook from Liqpay](#handling-webhook-from-liqpay-events)
-- [Localization & Translations](#localization--translations)
+  - [Generating a payment link](#generating-a-payment-link)
+  - [Handling webhook from Liqpay](#handling-webhook-from-liqpay-events)
+  - [Subscription support](#-subscription-support)
+  - [Importing subscriptions from the archive](#-importing-subscriptions-from-the-archive)
+  - [Managing subscriptions manually](#-managing-subscriptions-manually)
+- [Localization &amp; Translations](#localization--translations)
 - [Testing](#testing)
 - [License](#license)
 
@@ -113,7 +116,7 @@ After the general event is triggered, events corresponding to the statuses will 
 - `LiqpaySubscribed` - occurs when subscribing to payments
 - `LiqpayUnsubscribed` - occurs when unsubscribing from payments
 
-To handle these events in your Laravel application, you can register the corresponding event listeners. Pay special attention to [the package's behavior in case of errors in event handlers](docs/EVENTS.md).
+To handle these events in your Laravel application, you can register the corresponding event listeners. Pay special attention to [the package&#39;s behavior in case of errors in event handlers](docs/EVENTS.md).
 
 Example of registering a listener for the `LiqpayPaymentSucceeded` event:
 
@@ -149,11 +152,28 @@ The package supports automatic subscription registration via webhook (`action: s
 
 ### 📥 Importing subscriptions from the archive
 
-```bash
-php artisan liqpay:sync-subscriptions
-# or with dates:
-php artisan liqpay:sync-subscriptions --from=2024-01-01 --to=2024-06-01
+To import and synchronize Liqpay subscriptions in bulk, use the built-in Artisan command:
+
+```shell
+php artisan liqpay:sync-subscriptions [--from=YYYY-MM-DD] [--to=YYYY-MM-DD] [--restart]
 ```
+
+- By default, the command imports the archive for the past month.
+- Supports safe resuming: processing progress is saved in cache and can recover from interruptions.
+- The `--restart` flag resets progress and restarts the import from scratch.
+- Archive processing is memory efficient: CSV is streamed and never fully loaded into memory.
+
+**Example:**
+```shell
+php artisan liqpay:sync-subscriptions --from=2024-01-01 --to=2024-06-30
+```
+
+The archive is downloaded directly from the Liqpay API, and large datasets are handled reliably, even with failures or restarts.
+
+---
+
+**Recommended for initial data loading.**
+
 
 ### 🔧 Managing subscriptions manually
 
