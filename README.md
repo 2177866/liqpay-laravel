@@ -1,4 +1,4 @@
-# Laravel package for LiqPay integration (liqpay-laravel)
+# Laravel package for Liqpay integration (liqpay-laravel)
 
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/alyakin/liqpay-laravel.svg)](https://packagist.org/packages/alyakin/liqpay-laravel)
 [![Downloads](https://img.shields.io/packagist/dt/alyakin/liqpay-laravel.svg)](https://packagist.org/packages/alyakin/liqpay-laravel)
@@ -10,8 +10,7 @@
 [![Laravel Pint](https://github.com/2177866/liqpay-laravel/actions/workflows/pint.yml/badge.svg)](https://github.com/2177866/liqpay-laravel/actions/workflows/pint.yml)
 [![Larastan](https://github.com/2177866/liqpay-laravel/actions/workflows/larastan.yml/badge.svg)](https://github.com/2177866/liqpay-laravel/actions/workflows/larastan.yml)
 
-
-Package for integrating LiqPay into Laravel application. It allows generating payment links, signing requests, and handling incoming webhook events from LiqPay.
+Package for integrating Liqpay into Laravel application. It allows generating payment links, signing requests, and handling incoming webhook events from Liqpay.
 
 ---
 
@@ -36,7 +35,9 @@ Package for integrating LiqPay into Laravel application. It allows generating pa
 - Laravel 9+
 
 ## Installation
+
 Add the package via Composer:
+
 ```shell
 composer require alyakin/liqpay-laravel
 ```
@@ -164,6 +165,7 @@ php artisan liqpay:sync-subscriptions [--from=YYYY-MM-DD] [--to=YYYY-MM-DD] [--r
 - Archive processing is memory efficient: CSV is streamed and never fully loaded into memory.
 
 **Example:**
+
 ```shell
 php artisan liqpay:sync-subscriptions --from=2024-01-01 --to=2024-06-30
 ```
@@ -173,7 +175,6 @@ The archive is downloaded directly from the Liqpay API, and large datasets are h
 ---
 
 **Recommended for initial data loading.**
-
 
 ### 🔧 Managing subscriptions manually
 
@@ -192,6 +193,7 @@ For best practices and details on customizing translations, see [TRANSLATIONS.md
 All tests can be found in the folder with [`tests`](/tests/)
 
 To run the tests, use the command
+
 ```shell
 composer test
 ```
