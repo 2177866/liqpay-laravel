@@ -130,6 +130,7 @@ class SyncSubscriptionsCommand extends Command
         $json = file_get_contents($fullPath);
         if ($json === false) {
             $this->error(__('liqpay-laravel::messages.file_open_failed', ['file' => $fullPath]));
+
             return false;
         }
 
@@ -137,6 +138,7 @@ class SyncSubscriptionsCommand extends Command
         $data = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
         if (! isset($data['data']) || ! is_array($data['data'])) {
             $this->error(__('liqpay-laravel::messages.malformed_archive'));
+
             return false;
         }
 
