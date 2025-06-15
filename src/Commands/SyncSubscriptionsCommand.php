@@ -32,11 +32,7 @@ class SyncSubscriptionsCommand extends Command
 
         [$filePath, $startIndex] = $this->getOrDownloadArchive($from, $to, $restart);
 
-        try {
-            $processed = $this->processArchive($filePath, $startIndex);
-        } catch (\JsonException $e) {
-            return self::FAILURE;
-        }
+        $processed = $this->processArchive($filePath, $startIndex);
 
         if (! $processed) {
             return self::FAILURE;
@@ -99,7 +95,25 @@ class SyncSubscriptionsCommand extends Command
         ], false);
 
         if (! $response || ! is_string($response)) {
-            throw new \RuntimeException(__('liqpay-laravel::messages.download_failed'));
+            $this->error(__('liqpay-laravel::messages.download_failed'));
+            exit();
+        }
+
+        try {
+            /** @var array<string, mixed> $data */
+            $data = json_decode($response, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException $e) {
+            $this->error(__('liqpay-laravel::messages.malformed_archive'));
+            exit();
+        }
+
+        /** @var array{data: array<string, bool|float|int|string>} $data */
+        if ($data !== null && isset($data['data']['result']) && $data['data']['result'] === 'error') {
+            $this->error(__('liqpay-laravel::messages.payment_system_error', [
+                'code' => $data['data']['code'] ?? 'unknown',
+                'description' => $data['data']['err_description'] ?? 'No description provided',
+            ]));
+            exit();
         }
 
         $filename = 'liqpay-archive/'.uniqid('archive_', true).'.json';
@@ -132,15 +146,7 @@ class SyncSubscriptionsCommand extends Command
         $payments = $data['data'];
         $count = 0;
 
-        // Используем ленивую коллекцию для экономии памяти при больших архивах
-        $paymentsLazy = \Illuminate\Support\LazyCollection::make(function () use ($payments, $startIndex) {
-            $len = count($payments);
-            for ($i = $startIndex; $i < $len; $i++) {
-                yield $i => $payments[$i];
-            }
-        });
-
-        foreach ($paymentsLazy as $i => $payment) {
+        foreach ($payments as $i => $payment) {
             try {
                 $this->processPayment($payment);
             } catch (\Throwable $e) {
