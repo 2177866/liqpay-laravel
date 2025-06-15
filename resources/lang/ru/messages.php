@@ -8,6 +8,7 @@ return [
     'file_open_failed' => 'Не удалось открыть файл: :file',
     'malformed_archive' => 'Неправильный формат архива, ожидается JSON.',
     'error_at_line' => 'Ошибка на строке :line: :msg',
-    'processed_payments' => 'Обработано платежей: :count.',
+    'processed_payments' => 'Обработано: :count записей.',
     'json_decode_error' => 'Ошибка декодирования JSON: :error',
+    'payment_system_error' => 'Ошибка платежной системы[:code]: :description',
 ];

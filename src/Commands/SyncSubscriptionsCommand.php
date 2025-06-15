@@ -32,11 +32,7 @@ class SyncSubscriptionsCommand extends Command
 
         [$filePath, $startIndex] = $this->getOrDownloadArchive($from, $to, $restart);
 
-        try {
-            $processed = $this->processArchive($filePath, $startIndex);
-        } catch (\JsonException $e) {
-            return self::FAILURE;
-        }
+        $processed = $this->processArchive($filePath, $startIndex);
 
         if (! $processed) {
             return self::FAILURE;
@@ -96,10 +92,29 @@ class SyncSubscriptionsCommand extends Command
             'date_from' => $from,
             'date_to' => $to,
             'resp_format' => 'json',
-        ], false);
+        ], true);
 
         if (! $response || ! is_string($response)) {
-            throw new \RuntimeException(__('liqpay-laravel::messages.download_failed'));
+            $this->error(__('liqpay-laravel::messages.download_failed'));
+            die();
+        }
+
+        try {
+            $data = json_decode($response, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException $e) {
+            $this->error(__('liqpay-laravel::messages.malformed_archive'));
+            die();
+        }
+        if ($data){
+
+            if (isset($data['data']['result']) && $data['data']['result'] === 'error') {
+                $this->error(__('liqpay-laravel::messages.payment_system_error', [
+                    'code' => $data['data']['code'] ?? 'unknown',
+                    'description' => $data['data']['err_description'] ?? 'No description provided',
+                ]));
+                die();
+            }
+
         }
 
         $filename = 'liqpay-archive/'.uniqid('archive_', true).'.json';
@@ -117,7 +132,6 @@ class SyncSubscriptionsCommand extends Command
         $json = file_get_contents($fullPath);
         if ($json === false) {
             $this->error(__('liqpay-laravel::messages.file_open_failed', ['file' => $fullPath]));
-
             return false;
         }
 
@@ -125,22 +139,13 @@ class SyncSubscriptionsCommand extends Command
         $data = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
         if (! isset($data['data']) || ! is_array($data['data'])) {
             $this->error(__('liqpay-laravel::messages.malformed_archive'));
-
             return false;
         }
 
         $payments = $data['data'];
         $count = 0;
 
-        // Используем ленивую коллекцию для экономии памяти при больших архивах
-        $paymentsLazy = \Illuminate\Support\LazyCollection::make(function () use ($payments, $startIndex) {
-            $len = count($payments);
-            for ($i = $startIndex; $i < $len; $i++) {
-                yield $i => $payments[$i];
-            }
-        });
-
-        foreach ($paymentsLazy as $i => $payment) {
+        foreach ($payments as $i => $payment) {
             try {
                 $this->processPayment($payment);
             } catch (\Throwable $e) {
