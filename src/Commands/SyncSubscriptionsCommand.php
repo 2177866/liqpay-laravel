@@ -92,7 +92,7 @@ class SyncSubscriptionsCommand extends Command
             'date_from' => $from,
             'date_to' => $to,
             'resp_format' => 'json',
-        ], false);
+        ], true);
 
         if (! $response || ! is_string($response)) {
             $this->error(__('liqpay-laravel::messages.download_failed'));
@@ -100,14 +100,13 @@ class SyncSubscriptionsCommand extends Command
         }
 
         try {
-            /** @var array<string, mixed> $data */
+            /** @var null|array{data: array<string, bool|float|int|string>} $data */
             $data = json_decode($response, true, 512, JSON_THROW_ON_ERROR);
         } catch (\JsonException $e) {
             $this->error(__('liqpay-laravel::messages.malformed_archive'));
             exit();
         }
 
-        /** @var array{data: array<string, bool|float|int|string>} $data */
         if ($data !== null && isset($data['data']['result']) && $data['data']['result'] === 'error') {
             $this->error(__('liqpay-laravel::messages.payment_system_error', [
                 'code' => $data['data']['code'] ?? 'unknown',
@@ -131,7 +130,6 @@ class SyncSubscriptionsCommand extends Command
         $json = file_get_contents($fullPath);
         if ($json === false) {
             $this->error(__('liqpay-laravel::messages.file_open_failed', ['file' => $fullPath]));
-
             return false;
         }
 
@@ -139,7 +137,6 @@ class SyncSubscriptionsCommand extends Command
         $data = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
         if (! isset($data['data']) || ! is_array($data['data'])) {
             $this->error(__('liqpay-laravel::messages.malformed_archive'));
-
             return false;
         }
 
