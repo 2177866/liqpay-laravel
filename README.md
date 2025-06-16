@@ -49,11 +49,22 @@ php artisan vendor:publish --tag=liqpay-config
 php artisan vendor:publish --tag=liqpay-migrations
 ```
 
-Check the created configuration and migration files, make changes, and then run
+Check the created configuration and migration files, make changes (add your own fields if needed), and then run
 
 ```shell
 php artisan migrate
 ```
+
+---
+
+**Custom columns support:**
+If you add custom fields to the `liqpay_subscriptions` table,
+the package provides an [event mechanism](docs/CUSTOM_FIELDS.md) allowing you to process and update those fields before saving the model.
+
+You can subscribe to the `LiqpaySubscriptionBeforeSave` event to supplement or modify the record dynamically,
+for example — to populate `user_id` from webhook data or any custom logic.
+
+**See usage example in the [Extending Subscription Model Fields via Event](docs/CUSTOM_FIELDS.md)**
 
 ## Configuration
 
@@ -64,13 +75,16 @@ After publishing, the configuration file `config/liqpay.php` contains:
 - `result_url` — link for redirecting the user after payment
 - `server_url` — link for programmatic notification (webhook)
 
+ and parameters for importing
+- `archive_from` — default date to start import subscriptions from liqpay API (default: today-90days)
+- `archive_to` — default date of end (default today)
+- `cache_ttl` — caching time (information for importing), default 1 day (in seconds)
+
 All parameters can be overridden through the `.env` file:
 
 ```shell
 LIQPAY_PUBLIC_KEY=your_public_key
 LIQPAY_PRIVATE_KEY=your_private_key
-LIQPAY_RESULT_URL="${APP_URL}/billing"
-LIQPAY_SERVER_URL="/api/liqpay/webhook"
 ```
 
 ## Usage

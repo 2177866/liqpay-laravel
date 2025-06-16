@@ -26,23 +26,7 @@ class LiqpaySubscription extends Model
 {
     use HasFactory, HasUuids, SoftDeletes;
 
-    protected $fillable = [
-        'order_id',
-        'status',
-        'amount',
-        'currency',
-        'description',
-        'liqpay_order_id',
-        'payment_id',
-        'info',
-        'last_paid_at',
-        'last_payment_id',
-
-        'started_at',
-        'expired_at',
-        'liqpay_data',
-
-    ];
+    protected $guarded = [];
 
     protected $casts = [
         'liqpay_data' => 'array',

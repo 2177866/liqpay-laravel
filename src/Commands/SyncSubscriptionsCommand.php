@@ -2,6 +2,7 @@
 
 namespace Alyakin\LiqpayLaravel\Commands;
 
+use Alyakin\LiqpayLaravel\Events\LiqpaySubscriptionBeforeSave;
 use Alyakin\LiqpayLaravel\Models\LiqpaySubscription;
 use Alyakin\LiqpayLaravel\Services\LiqpayService;
 use Illuminate\Console\Command;
@@ -202,6 +203,7 @@ class SyncSubscriptionsCommand extends Command
             ['order_id' => $orderId],
             ['amount' => $payment['amount'] ?? null, 'currency' => $payment['currency'] ?? null]
         );
+        $save = false;
 
         if ($action === 'subscribe') {
             if ($status === 'subscribed') {
@@ -209,20 +211,27 @@ class SyncSubscriptionsCommand extends Command
                 $subscription->info = $this->tryDecodeInfo($payment['info'] ?? null) ?? null;
                 $subscription->status = 'active';
                 $subscription->liqpay_data = $payment;
-                $subscription->save();
             } elseif ($status === 'unsubscribed') {
                 $subscription->status = 'inactive';
                 $subscription->expired_at = $payment['create_date'] ? $this->tsToDatetime((string) $payment['create_date']) : null;
-                $subscription->save();
             }
+            $save = true;
         } elseif ($action === 'regular' && $status === 'success') {
             $current = $subscription->last_paid_at;
             $newDate = $payment['create_date'] ? $this->tsToDatetime((string) $payment['create_date']) : null;
             if (! $current || \Carbon\Carbon::parse($newDate)->gt($current)) {
                 $subscription->last_paid_at = $newDate;
                 $subscription->last_payment_id = $payment['payment_id'] ?? null;
-                $subscription->save();
+                $save = true;
             }
+        }
+
+        if ($save) {
+            event(new LiqpaySubscriptionBeforeSave($subscription, [
+                'payment' => $payment,
+            ]));
+
+            $subscription->save();
         }
     }
 

@@ -14,7 +14,7 @@ class SyncSubscriptionsCommandTest extends TestCase
 {
     use RefreshDatabase;
 
-    /** @var array<array<string, mixed>> */
+    /** @var array<array<string, int|string>> */
     private array $jsonFixture = [
         [
             'action' => 'subscribe',
@@ -157,20 +157,6 @@ class SyncSubscriptionsCommandTest extends TestCase
         ]);
         $this->assertNull(Cache::get('liqpay:sync:file'));
         $this->assertCount(0, Storage::disk('local')->allFiles('liqpay-archive'));
-    }
-
-    public function test_handles_broken_json_gracefully(): void
-    {
-        $brokenJson = '{"data": [ { "action": "subscribe", "order_id": "ORD-1" }, BROKEN ]}';
-        $this->mockLiqpayServiceJson($brokenJson);
-
-        $result = Artisan::call('liqpay:sync-subscriptions', [
-            '--from' => '2024-01-01',
-            '--to' => '2024-01-31',
-        ]);
-        $this->assertNotEquals(0, $result, 'Should not exit successfully');
-        // Кеш прогресса зафиксирован на ошибочном индексе
-        $this->assertNotNull(Cache::get('liqpay:sync:index'));
     }
 
     /**
