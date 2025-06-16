@@ -3,6 +3,7 @@
 namespace Alyakin\LiqpayLaravel\Listeners;
 
 use Alyakin\LiqpayLaravel\Events\LiqpayPaymentSucceeded;
+use Alyakin\LiqpayLaravel\Events\LiqpaySubscriptionBeforeSave;
 use Alyakin\LiqpayLaravel\Models\LiqpaySubscription;
 use Carbon\Carbon;
 
@@ -30,6 +31,12 @@ class LiqpaySubscriptionPaid
         )) {
             $subscription->last_paid_at = $newPaidAt;
             $subscription->last_payment_id = $dto->payment_id ? (string) $dto->payment_id : null;
+
+            // Trigger the event before saving the subscription
+            event(new LiqpaySubscriptionBeforeSave($subscription, [
+                'payment' => $dto,
+            ]));
+
             $subscription->save();
         }
     }

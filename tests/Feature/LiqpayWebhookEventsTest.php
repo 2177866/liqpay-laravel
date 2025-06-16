@@ -7,7 +7,6 @@ use Alyakin\LiqpayLaravel\Events\LiqpayPaymentSucceeded;
 use Alyakin\LiqpayLaravel\Events\LiqpayPaymentWaiting;
 use Alyakin\LiqpayLaravel\Events\LiqpayReversed;
 use Alyakin\LiqpayLaravel\Events\LiqpayWebhookReceived;
-use Alyakin\LiqpayLaravel\Helpers\LiqpaySignatureValidator;
 use Alyakin\LiqpayLaravel\Tests\TestCase;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Str;
@@ -173,7 +172,6 @@ class LiqpayWebhookEventsTest extends TestCase
 
     public function test_custom_listener_is_called(): void
     {
-        // Не вызывайте fakeExcept, если нужен чистый Event реестр!
         $called = false;
         Event::listen(
             \Alyakin\LiqpayLaravel\Events\LiqpaySubscribed::class,
@@ -189,40 +187,5 @@ class LiqpayWebhookEventsTest extends TestCase
 
         $response->assertOk();
         $this->assertTrue($called, 'Custom listener was not called');
-    }
-
-    /**
-     * Генерирует корректный webhook-запрос Liqpay с подписью
-     *
-     * @param  array<string, mixed>  $overrides
-     * @return array{data: string, signature: string}
-     */
-    private function makeWebhookRequest(array $overrides = []): array
-    {
-        $payload = array_merge([
-            'order_id' => Str::uuid()->toString(),
-            'action' => 'pay',
-            'status' => 'success',
-            'amount' => 100,
-            'currency' => 'UAH',
-            'info' => json_encode(['email' => 'test@example.com']),
-            'create_date' => ((int) now()->timestamp) * 1000,
-            // добавьте другие поля, если они обязательны для DTO/Request
-        ], $overrides);
-
-        $json = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        if ($json === false) {
-            throw new \RuntimeException('JSON encode failed');
-        }
-        $data = base64_encode($json);
-
-        /** @var string $privateKey */
-        $privateKey = config('liqpay.private_key').'';
-        $signature = LiqpaySignatureValidator::generate($data, $privateKey);
-
-        return [
-            'data' => $data,
-            'signature' => $signature,
-        ];
     }
 }

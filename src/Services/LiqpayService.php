@@ -4,7 +4,6 @@ namespace Alyakin\LiqpayLaravel\Services;
 
 use Alyakin\LiqpayLaravel\Contracts\LiqpayServiceInterface;
 use Alyakin\LiqpayLaravel\DTO\LiqpayRequestDto;
-use Alyakin\LiqpayLaravel\DTO\LiqpaySubscriptionDto;
 use Alyakin\LiqpayLaravel\DTO\LiqpayWebhookDto;
 use Alyakin\LiqpayLaravel\Helpers\LiqpaySignatureValidator;
 use Illuminate\Support\Facades\Config;
@@ -21,18 +20,25 @@ class LiqpayService implements LiqpayServiceInterface
 
     protected string $privateKey;
 
+    /**
+     * @var array<string> Список поддерживаемых валют
+     */
+    protected array $supportedCurrencies = ['USD', 'UAH', 'EUR'];
+
+    protected string $currencyDefault = 'UAH';
+
     public function __construct()
     {
         // Ensure the required configuration is set
         if (! Config::has('liqpay.public_key') || ! Config::has('liqpay.private_key')) {
-            throw new \RuntimeException('Liqpay configuration is not set');
+            throw new \RuntimeException(__('liqpay-laravel::messages.config_missing'));
         }
         $this->publicKey = Config::get('liqpay.public_key').'';
         $this->privateKey = Config::get('liqpay.private_key').'';
 
         $this->apiUrl = Config::get('liqpay.checkout_url', $this->apiUrl).'';
         if (! filter_var($this->apiUrl, FILTER_VALIDATE_URL)) {
-            throw new \InvalidArgumentException('Invalid Liqpay checkout URL');
+            throw new \InvalidArgumentException(__('liqpay-laravel::messages.invalid_url'));
         }
     }
 
@@ -47,7 +53,9 @@ class LiqpayService implements LiqpayServiceInterface
 
         $json = json_encode($params, JSON_UNESCAPED_UNICODE);
         if ($json === false) {
-            throw new \UnexpectedValueException('JSON encode failed');
+            throw new \UnexpectedValueException(__('liqpay-laravel::messages.json_encode_failed', [
+                'error' => json_last_error_msg(),
+            ]));
         }
 
         $data = base64_encode($json);
@@ -69,13 +77,15 @@ class LiqpayService implements LiqpayServiceInterface
     public function decodeWebhook(string $data, string $signature): LiqpayWebhookDto
     {
         if (! LiqpaySignatureValidator::verify($data, $signature, $this->privateKey)) {
-            throw new \UnexpectedValueException('Invalid Liqpay signature');
+            throw new \UnexpectedValueException(__('liqpay-laravel::messages.invalid_signature'));
         }
 
         $decoded = json_decode(base64_decode($data), true);
 
         if (! is_array($decoded)) {
-            throw new \UnexpectedValueException('Invalid Liqpay JSON payload');
+            throw new \UnexpectedValueException(__('liqpay-laravel::messages.json_decode_error', [
+                'error' => json_last_error_msg(),
+            ]));
         }
 
         /** @var array<string,mixed> $decoded */
@@ -99,19 +109,22 @@ class LiqpayService implements LiqpayServiceInterface
         $response = Http::asForm()->post("{$this->apiUrl}{$path}", $request);
 
         if ($response->failed()) {
-            Log::error('Liqpay API request failed', [
+            Log::error(__('liqpay-laravel::messages.liqpay_api_error', ['response' => $response->status()]), [
                 'path' => "{$this->apiUrl}{$path}",
                 'params' => $params,
                 'status' => $response->status(),
                 'body' => $response->body(),
             ]);
-            throw new \RuntimeException('Liqpay API request failed');
+
+            throw new \RuntimeException(__('liqpay-laravel::messages.liqpay_api_error', [
+                'response' => $response->body(),
+            ]));
         }
 
         if ($is_json) {
             $decoded = $response->json();
             if (! is_array($decoded)) {
-                throw new \UnexpectedValueException('Invalid JSON response from Liqpay');
+                throw new \UnexpectedValueException(__('liqpay-laravel::messages.invalid_json_response'));
             }
 
             return $decoded;
@@ -127,18 +140,14 @@ class LiqpayService implements LiqpayServiceInterface
      */
     public function unsubscribe(string $orderId): array
     {
-        /** @var array<string, mixed> $response */
-        $response = $this->api('request', [
+        $requestRaw = [
             'action' => 'unsubscribe',
             'order_id' => $orderId,
-        ], true);
+        ];
 
-        if (! isset($response['result']) || $response['result'] !== 'ok') {
-            Log::error('Liqpay unsubscribe failed', [
-                'order_id' => $orderId,
-                'response' => $response,
-            ]);
-        }
+        /** @var array<string, mixed> $response */
+        $response = $this->api('request', $requestRaw, true);
+        $this->handleAPIErrorResponse($requestRaw, $response);
 
         return $response;
     }
@@ -148,22 +157,45 @@ class LiqpayService implements LiqpayServiceInterface
      *
      * @return array<string, mixed>
      */
-    public function subscribeUpdate(string $orderId, LiqpaySubscriptionDto $params): array
+    public function subscribeUpdate(string $orderId, ?string $currency = null, ?string $description = null): array
     {
-        $requestRaw = $params->toArray();
-        $requestRaw['order_id'] = $orderId;
-        $requestRaw['action'] = 'subscribe_update';
+        // $currency can only USD, UAH, EUR
+        if ($currency && ! in_array($currency, $this->supportedCurrencies, true)) {
+            $currency = $this->currencyDefault;
+        }
+
+        $requestRaw = [
+            'action' => 'subscribe_update',
+            'order_id' => $orderId,
+            'currency' => $currency,
+            'description' => $description ?? '',
+        ];
 
         /** @var array<string, mixed> $response */
         $response = $this->api('request', $requestRaw, true);
 
-        if (! isset($response['result']) || $response['result'] !== 'ok') {
-            Log::error('Liqpay subscribe updateing failed', [
-                'order_id' => $orderId,
-                'response' => $response,
-            ]);
-        }
+        $this->handleAPIErrorResponse($requestRaw, $response);
 
         return $response;
+    }
+
+    /**
+     * Обрабатывает ошибочный ответ API.
+     *
+     * @param  array<string, mixed>  $request  Данные запроса
+     * @param  array<string, mixed>  $response  Данные ответа
+     */
+    public function handleAPIErrorResponse(array $request, array $response): bool
+    {
+        if (! isset($response['result']) || $response['result'] !== 'ok') {
+            Log::error(__('liqpay-laravel::messages.api_error'), [
+                'request' => $request,
+                'response' => $response,
+            ]);
+
+            return false;
+        }
+
+        return true;
     }
 }

@@ -11,4 +11,13 @@ return [
     'processed_payments' => 'Обработано: :count записей.',
     'json_decode_error' => 'Ошибка декодирования JSON: :error',
     'payment_system_error' => 'Ошибка платежной системы[:code]: :description',
+    'liqpay_api_error' => 'Ошибка API Liqpay: :request, :response',
+
+    // Исключения
+    'config_missing' => 'Конфигурация Liqpay не задана.',
+    'invalid_url' => 'Некорректный URL для Liqpay checkout.',
+    'json_encode_failed' => 'JSON кодирование не удалось: :error',
+    'invalid_signature' => 'Недействительная подпись Liqpay.',
+
+    'invalid_json_response' => 'Недействительный JSON ответ от Liqpay.',
 ];
