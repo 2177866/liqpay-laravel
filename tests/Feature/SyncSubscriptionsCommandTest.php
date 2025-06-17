@@ -29,6 +29,18 @@ class SyncSubscriptionsCommandTest extends TestCase
             'info' => '{"email": "user1@example.com"}',
         ],
         [
+            'action' => 'regular',
+            'status' => 'success',
+            'order_id' => 'ORD-1',
+            'amount' => 100,
+            'currency' => 'UAH',
+            'description' => 'Test desc',
+            'liqpay_order_id' => 'LQ-ORD-1',
+            'payment_id' => 'PM-2',
+            'create_date' => 1717777999000,
+            'info' => '{"email": "user1@example.com"}',
+        ],
+        [
             'action' => 'subscribe',
             'status' => 'unsubscribed',
             'order_id' => 'ORD-1',
@@ -38,18 +50,6 @@ class SyncSubscriptionsCommandTest extends TestCase
             'liqpay_order_id' => 'LQ-ORD-1',
             'payment_id' => 'PM-1',
             'create_date' => 1717779999000,
-            'info' => '{"email": "user1@example.com"}',
-        ],
-        [
-            'action' => 'regular',
-            'status' => 'success',
-            'order_id' => 'ORD-1',
-            'amount' => 100,
-            'currency' => 'UAH',
-            'description' => 'Test desc',
-            'liqpay_order_id' => 'LQ-ORD-1',
-            'payment_id' => 'PM-2',
-            'create_date' => 1717888888000,
             'info' => '{"email": "user1@example.com"}',
         ],
         [
@@ -86,11 +86,7 @@ class SyncSubscriptionsCommandTest extends TestCase
     {
         $this->mockLiqpayServiceJson();
         $this->assertDatabaseMissing('liqpay_subscriptions', ['order_id' => 'ORD-1']);
-
-        $this->artisan('liqpay:sync-subscriptions', [
-            '--from' => '2024-01-01',
-            '--to' => '2024-01-31',
-        ]);
+        $this->artisan('liqpay:sync-subscriptions');
 
         // Проверяем, что обе подписки созданы и обновлены корректно
         $this->assertDatabaseHas('liqpay_subscriptions', [
@@ -165,9 +161,8 @@ class SyncSubscriptionsCommandTest extends TestCase
     private function mockLiqpayServiceJson(?string $json = null): void
     {
         $mock = Mockery::mock(LiqpayService::class);
-        $response = $json ?? json_encode(['result' => 'success', 'data' => $this->jsonFixture]);
         // @phpstan-ignore-next-line
-        $mock->shouldReceive('api')->andReturn($response);
+        $mock->shouldReceive('api')->andReturn(['result' => 'success', 'data' => $this->jsonFixture]);
         // @phpstan-ignore-next-line
         $this->app->instance(LiqpayService::class, $mock);
     }

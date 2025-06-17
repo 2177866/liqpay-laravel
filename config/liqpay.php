@@ -19,7 +19,7 @@ return [
      * These settings control the date range for the archive,
      * the cache TTL for the archive file,
      */
-    'archive_from' => env('LIQPAY_ARCHIVE_FROM', now()->subDay(90)->toDateString()),
+    'archive_from' => env('LIQPAY_ARCHIVE_FROM', now()->subDays(90)->toDateString()),
     'archive_to' => env('LIQPAY_ARCHIVE_TO', now()->toDateString()),
     'cache_ttl' => env('LIQPAY_CACHE_TTL', 60 * 60 * 24), // 1 day in seconds
 ];

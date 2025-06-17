@@ -6,7 +6,9 @@ use Alyakin\LiqpayLaravel\Events\LiqpaySubscriptionBeforeSave;
 use Alyakin\LiqpayLaravel\Models\LiqpaySubscription;
 use Alyakin\LiqpayLaravel\Services\LiqpayService;
 use Illuminate\Console\Command;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 
 class SyncSubscriptionsCommand extends Command
@@ -95,29 +97,21 @@ class SyncSubscriptionsCommand extends Command
             'resp_format' => 'json',
         ], true);
 
-        if (! $response || ! is_string($response)) {
+        if (! $response || ! is_array($response)) {
             $this->error(__('liqpay-laravel::messages.download_failed'));
             exit();
         }
 
-        try {
-            /** @var null|array{data: array<string, bool|float|int|string>} $data */
-            $data = json_decode($response, true, 512, JSON_THROW_ON_ERROR);
-        } catch (\JsonException $e) {
-            $this->error(__('liqpay-laravel::messages.malformed_archive'));
-            exit();
-        }
-
-        if ($data !== null && isset($data['data']['result']) && $data['data']['result'] === 'error') {
+        if ($response !== null && isset($response['data']['result']) && $response['data']['result'] === 'error') {
             $this->error(__('liqpay-laravel::messages.payment_system_error', [
-                'code' => $data['data']['code'] ?? 'unknown',
-                'description' => $data['data']['err_description'] ?? 'No description provided',
+                'code' => $response['data']['code'] ?? 'unknown',
+                'description' => $response['data']['err_description'] ?? 'No description provided',
             ]));
             exit();
         }
 
         $filename = 'liqpay-archive/'.uniqid('archive_', true).'.json';
-        Storage::put($filename, $response);
+        Storage::put($filename, ''.json_encode($response));
 
         return $filename;
     }
@@ -170,11 +164,6 @@ class SyncSubscriptionsCommand extends Command
     /**
      * Основная бизнес-логика обработки записи архива.
      *
-    /**
-     * Class SyncSubscriptionsCommand
-     *
-     * This command handles the synchronization of subscriptions.
-     *
      * @param array{
      *  action:?string,
      *  status:?string,
@@ -204,33 +193,40 @@ class SyncSubscriptionsCommand extends Command
             ['amount' => $payment['amount'] ?? null, 'currency' => $payment['currency'] ?? null]
         );
         $save = false;
+        $fields = [];
 
         if ($action === 'subscribe') {
+            $fields = $this->mapSubscriptionFields($payment);
+
             if ($status === 'subscribed') {
-                $subscription->fill($this->mapSubscriptionFields($payment));
-                $subscription->info = $this->tryDecodeInfo($payment['info'] ?? null) ?? null;
-                $subscription->status = 'active';
-                $subscription->liqpay_data = $payment;
+                $fields['status'] = 'active';
+                $fields['started_at'] = $payment['create_date'] ? $this->tsToDatetime((string) $payment['create_date']) : null;
+                $fields['created_at'] = $fields['started_at'];
             } elseif ($status === 'unsubscribed') {
+                // This field is not empty and should not be overwritten MANNUALLY.
                 $subscription->status = 'inactive';
-                $subscription->expired_at = $payment['create_date'] ? $this->tsToDatetime((string) $payment['create_date']) : null;
+
+                $fields['expired_at'] = $payment['create_date'] ? $this->tsToDatetime((string) $payment['create_date']) : null;
             }
             $save = true;
         } elseif ($action === 'regular' && $status === 'success') {
+            $fields = $this->mapSubscriptionFields($payment);
             $current = $subscription->last_paid_at;
             $newDate = $payment['create_date'] ? $this->tsToDatetime((string) $payment['create_date']) : null;
+
             if (! $current || \Carbon\Carbon::parse($newDate)->gt($current)) {
-                $subscription->last_paid_at = $newDate;
-                $subscription->last_payment_id = $payment['payment_id'] ?? null;
-                $save = true;
+                $fields['last_paid_at'] = $newDate;
+                $fields['last_payment_id'] = $payment['payment_id'] ?? null;
             }
+
+            $save = true;
         }
 
         if ($save) {
+            $this->fillIfEmptySafe($subscription, $fields);
             event(new LiqpaySubscriptionBeforeSave($subscription, [
                 'payment' => $payment,
             ]));
-
             $subscription->save();
         }
     }
@@ -243,9 +239,36 @@ class SyncSubscriptionsCommand extends Command
      */
     protected function mapSubscriptionFields(array $payment): array
     {
-        return collect($payment)->only([
-            'status', 'amount', 'currency', 'description', 'liqpay_order_id', 'payment_id',
+        $fields = collect($payment)->only([
+            'description', 'liqpay_order_id', 'payment_id',
         ])->toArray();
+
+        $fields['liqpay_data'] = $payment;
+        if (is_string($payment['info']) && ! empty($payment['info'])) {
+            $fields['info'] = $this->tryDecodeInfo($payment['info']) ?? null;
+        } else {
+            $fields['info'] = $payment['info'] ?? null;
+        }
+
+        return $fields;
+    }
+
+    /**
+     * Заполняет модель, если поля пустые.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    protected static function fillIfEmptySafe(Model &$model, array $data): void
+    {
+        $columns = Schema::getColumnListing($model->getTable());
+        $verifiedEmptyColumns = [];
+        foreach ($data as $key => $value) {
+            if (in_array($key, $columns, true) && empty($model->{$key})) {
+                $verifiedEmptyColumns[$key] = $value;
+            }
+        }
+        $model->fill($verifiedEmptyColumns);
+
     }
 
     /**

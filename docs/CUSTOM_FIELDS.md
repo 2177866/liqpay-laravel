@@ -16,11 +16,12 @@ use Illuminate\Support\Facades\Event;
 Event::listen(LiqpaySubscriptionBeforeSave::class, function (LiqpaySubscriptionBeforeSave $event) {
     // $event->subscription is the Eloquent model to be saved
     // Assume info is a JSON-encoded string with keys like {"user_id":123}
+    // $info field have a array cast (already accessable as array)
     $info = $event->subscription->info;
-    if (is_string($info)) {
-        $decoded = json_decode($info, true);
-        if (is_array($decoded) && isset($decoded['user_id'])) {
-            $event->subscription->user_id = $decoded['user_id'];
+
+    if (!is_null($info)) {
+        if (isset($info['user_id'])) {
+            $event->subscription->user_id = $info['user_id'];
         }
     }
 });
