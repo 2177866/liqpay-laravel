@@ -244,10 +244,8 @@ class SyncSubscriptionsCommand extends Command
         ])->toArray();
 
         $fields['liqpay_data'] = $payment;
-        if (is_string($payment['info']) && ! empty($payment['info'])) {
+        if (isset($payment['info']) && is_string($payment['info']) && ! empty($payment['info'])) {
             $fields['info'] = $this->tryDecodeInfo($payment['info']) ?? null;
-        } else {
-            $fields['info'] = $payment['info'] ?? null;
         }
 
         return $fields;
@@ -268,7 +266,6 @@ class SyncSubscriptionsCommand extends Command
             }
         }
         $model->fill($verifiedEmptyColumns);
-
     }
 
     /**
